@@ -8,7 +8,9 @@ var fs = require('fs'),
 	path = require('path'),
 	$ = global.jQuery,
 	storage = require('./storage.js'),
-	compiler = require('./compiler.js');
+	compiler = require('./compiler.js'),
+	child_process = require('child_process'),
+	notifier = require('./notifier.js');
 
 var projectsDb = storage.getProjects(),
 	watchedCollection = {},	//watched file Collection
@@ -177,7 +179,30 @@ function addWatchListener(src) {
 
 		//when file change,compile
 		var file = watchedCollection[src];
-		if (file.compile) compiler.runCompile(file);
+
+		/* 
+		 * Original process here.
+		 */
+		//if (file.compile) compiler.runCompile(file);
+
+		/*
+		 * Custom changes start here.
+		 */
+		if (file.compile) {
+			// Execute mvn process to build CSS.
+			notifier.showNotification("About to start maven process.");
+			child_process.exec("mvn -Pprod process-resources", {
+				cwd: "/home/derekf/Development/clearview/"
+			}, function(err, stdout, stderr){
+				if (err) {
+					// Problem executing the maven profile.
+					notifier.throwAppError(err.stack);
+					return;
+				}
+				notifier.showNotification("Maven Prod profile process-resources successful.");
+				return;
+			});
+		}
 	});
 }
 
